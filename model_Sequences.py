@@ -18,15 +18,9 @@ import numpy as np
 from numpy.random import uniform
 from random import sample
 import pandas as pd
-import argparse
 
 pyrosetta.init()
 
-
-parser = argparse.ArgumentParser(description='')    
-parser.add_argument('--pdb', type=str, required=True)
-parser.add_argument('--input', type=str, required=True)
-args = parser.parse_args()
 
 #### Function to mutate a specific residue
 def mutate_repack(starting_pose, posi, amino):
@@ -77,31 +71,33 @@ def model_sequence(pose, sequence):
         pose = mutate_repack(pose, posi=i+1, amino=sequence_full[i])
     return scorefxn(pose)
 
-
+#### Use template structure and sequences to model and extract its dG value into a pandas dataframe
+#### and outputs a .csv file with the results
+def Execute(pose, input_csv):
+    pose_init = pose.clone()
+    #### Reads input file with sequences to be modeled
+    seqs = input_csv
+    data = pd.DataFrame(index = range(1,len(seqs.index)+1), columns = range(1,3))
+    for i in range(0, len(data.index)):
+        sequence = seqs.iloc[i,0]
+        pose = pose_init
+        dG = model_sequence(pose, sequence)
+        data.iloc[i,0] = ''.join(sequence)
+        data.iloc[i,1] = dG
+    data.to_csv("output.csv") 
+    return data
+    
+     
 #### Read input PDB structure used for construct the models
-pose = pose_from_pdb(args.pdb)
-pose_init = pose.clone()
-
+pose = pose_from_pdb("2lzt.pdb")
 #### Define score ref2015_cart and apply it to the pose
 scorefxn = pyrosetta.create_score_function("ref2015_cart.wts")
 scorefxn(pose)
-
 #### Reads input file with sequences to be modeled
-seqs = pd.read_csv(args.input)
-data = pd.DataFrame(index = range(1,len(seqs.index)+1), columns = range(1,3))
-
-
-for i in range(0, len(data.index)):
-    sequence = seqs.iloc[i,0]
-    pose = pose_init
-    dG = model_sequence(pose, sequence)
-    data.iloc[i,0] = ''.join(sequence)
-    data.iloc[i,1] = dG
-
-    
-data.to_csv("output.csv")    
-    
-    
+inputcsv = pd.read_csv("input.csv")
+ 
+#### Execute main function to model sequences and extract dG values
+dG_modeled_sequences = Execute(pose, inputcsv)
 
 
 
