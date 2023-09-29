@@ -6,10 +6,5 @@
 
 ## model_Sequences.py
 
-python model_Sequences.py --pdb  --input
-
---pdb = PDB template to model sequences
-
---input = Sequences in .csv file to model
-
-e.g.: python model_Sequences.py --pdb 2lzt.pdb --input input.csv 
+Python script used to model sequences and output the dG values into a Pandas dataframe and .csv file. 
+Reads a .csv file containing the sequences and a PDB to use the structure as a template. Example input and output file can be found in the "dataset_teste" folder.
