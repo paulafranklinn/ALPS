@@ -1,10 +1,9 @@
-install.packages("bio3d", dependencies=TRUE)
 library(bio3d)
 library(data.table)
 
 Recorte_func <- function(pdb_code, target_chain, resi, cutoff){
 
-## variaveis
+## variaveis:
 ptn <- read.pdb(pdb_code)
 ptn_atom <- ptn$atom
 residue_list <- resi
@@ -58,16 +57,11 @@ for (k in 1:length(split_vec)){
   chain_pdb <- unique(lig_potenciais$chain)
 
   index = unique(lig_potenciais$resno)
-  lig_resi_pept <- trim.pdb(ptn_1vg0, resno= index, chain = chain_pdb)
+  lig_resi_pept <- trim.pdb(ptn, resno= index, chain = chain_pdb)
 
   seq_min <- min(split_vec[[k]])
   seq_max <- max(split_vec[[k]])
 
-  write.pdb(lig_resi_pept, file = paste("/home/papaula/Documentos/Mestrado/",seq_min,"_",seq_max,"_",chain_pdb,"_",pdb_code,".pdb",sep = ""))
+  write.pdb(lig_resi_pept, file = paste(getwd(),"/",seq_min,"_",seq_max,"_",chain_pdb,"_",pdb_code,".pdb",sep = ""))
 }
 }
-
-#exemplo
-a <- Recorte_func("1vg0","A", c(390:395),10)
-
-
