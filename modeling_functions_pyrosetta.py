@@ -263,7 +263,7 @@ def model_sequence(pose, mutations, scorefxn):
     
     for index in to_mutate:
         new_pose = mutate_repack(starting_pose = new_pose, posi = index, amino = to_mutate[index], scorefxn = scorefxn)
-    new_pose = pack_relax(pose = new_pose, scorefxn = scorefxn)
+    pack_relax(pose = new_pose, scorefxn = scorefxn)
     return new_pose, scorefxn(new_pose)
 
 def Execute(pose, dataframe, chain, scorefxn):
