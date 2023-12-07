@@ -1,4 +1,4 @@
-# p-R-otein--py-chine
+# peptide machine
 
 # Usage
 
