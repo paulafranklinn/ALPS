@@ -8,7 +8,7 @@ Função que recorta peptídeos de interesse, usando como métrica a distância 
 
 ## Gerador_de_seq
 
-Gera uma população de sequencias únicas.
+Gera uma população de sequencias únicas através da adição de n mutações na sequencia desejada.
 
 ## modeling_functions_pyrosetta.py
 
