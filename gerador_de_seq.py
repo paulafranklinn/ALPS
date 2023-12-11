@@ -50,4 +50,4 @@ def gerar_mutacoes(sequencia_original,n_popul,n_mut):
 
 ## Como usar?
 sequencia_original = "STIEEQAKTFLDKFNHEAEDLFYQSSLASWNYNTAAAA" ## especifica sequencia
-b,c = gerar_mutacoes(sequencia_original,10,4) ## roda funçao
+testando = gerar_mutacoes(sequencia_original,10,4) ## roda funçao
