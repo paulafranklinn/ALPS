@@ -18,31 +18,36 @@ import csv
 import pandas as pd
 import numpy as np
 
-def gerar_mutacoes(sequencia_original, num_mutacoes):
+def gerar_mutacoes(sequencia_original,n_popul,n_mut):
+    
+    ## variáveis
     sequencias_mutadas = []
     seq_mut_df = 0
-    
-    while len(sequencias_mutadas) < num_mutacoes:
-        posicao_mutacao1,posicao_mutacao2 = random.choices(range(len(sequencia_original)),k=2)
-        novo_aminoacido1,novo_aminoacido2 = random.choices("ACDEFGHIKLMNPQRSTVWY",k=2)
-        
+    posi_mutat_todas= []
+
+    while len(sequencias_mutadas) < n_popul:
+        posicao_mutacao = random.sample(range(len(sequencia_original)),k=n_mut)
+        posi_mutat_todas.append(posicao_mutacao)
+        novo_aminoacido = random.sample("ACDEFGHIKLMNPQRSTVWY",k=n_mut)
+
+
         sequencia_mutada = list(sequencia_original)
-        sequencia_mutada[posicao_mutacao1] = novo_aminoacido1
-        sequencia_mutada[posicao_mutacao2] = novo_aminoacido2
         
+        for i in range(n_mut):
+            if sequencia_mutada[posicao_mutacao[i]] != novo_aminoacido[i]:
+                sequencia_mutada[posicao_mutacao[i]] = novo_aminoacido[i]
+            
         sequencia_mutada = ''.join(sequencia_mutada)
         
         if sequencia_mutada not in sequencias_mutadas:            
             sequencias_mutadas.append(sequencia_mutada)
         
-        porcentagem_concluida = (len(sequencias_mutadas) / num_mutacoes) * 100
+        porcentagem_concluida = (len(sequencias_mutadas) / n_popul) * 100
         print(f"({porcentagem_concluida:.2f}% concluído)")
-
     seq_mut_df = pd.DataFrame(sequencias_mutadas)
 
-    return seq_mut_df
+    return seq_mut_df, posicao_mutacao, posi_mutat_todas
 
 ## Como usar?
 sequencia_original = "STIEEQAKTFLDKFNHEAEDLFYQSSLASWNYNTAAAA" ## especifica sequencia
-
-b = gerar_mutacoes(sequencia_original, 1000) ## roda funçao
+b,c = gerar_mutacoes(sequencia_original,10,4) ## roda funçao
