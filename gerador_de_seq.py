@@ -28,7 +28,7 @@ def gerar_mutacoes(sequencia_original,n_popul,n_mut):
     while len(sequencias_mutadas) < n_popul:
         posicao_mutacao = random.sample(range(len(sequencia_original)),k=n_mut)
         posi_mutat_todas.append(posicao_mutacao)
-        novo_aminoacido = random.sample("ACDEFGHIKLMNPQRSTVWY",k=n_mut)
+        novo_aminoacido = random.choices("ACDEFGHIKLMNPQRSTVWY",k=n_mut)
 
 
         sequencia_mutada = list(sequencia_original)
