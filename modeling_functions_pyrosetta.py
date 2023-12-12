@@ -26,6 +26,7 @@ import pandas as pd
 import os
 import random
 import math
+import time
 #imports from pyrosetta
 from mimetypes import init
 from pyrosetta import *
@@ -53,6 +54,48 @@ from rosetta.core.scoring.methods import EnergyMethodOptions
 import os
 import numpy as np
 from numpy.random import uniform
+
+
+def read_pose(pdb):
+    """
+    Read a protein structure from a PDB file using PyRosetta.
+
+    Parameters:
+    - pdb (str): Path to the PDB file containing the protein structure.
+
+    Returns:
+    - pose (pyrosetta.rosetta.core.pose.Pose): PyRosetta pose object representing the protein structure.
+    - scorefxn (pyrosetta.rosetta.core.scoring.ScoreFunction): PyRosetta score function used for energy calculations.
+
+    Example:
+    ```
+    pdb_file = "example.pdb"
+    protein_pose, energy_score_function = read_pose(pdb_file)
+    ```
+
+    Note:
+    - The function initializes the PyRosetta framework using `pyrosetta.init()`.
+    - It reads the protein structure from the specified PDB file using `pose_from_pdb`.
+    - It creates a score function (`ref2015_cart.wts` in this case) using `pyrosetta.create_score_function`.
+    - The energy of the structure is calculated using `scorefxn(pose)` to ensure proper initialization of the pose.
+
+    Reference:
+    - PyRosetta Documentation: https://graylab.jhu.edu/PyRosetta.documentation/
+
+    """
+    # Initialize PyRosetta
+    pyrosetta.init()
+
+    # Read the protein structure from the PDB file
+    pose = pose_from_pdb(pdb)
+
+    # Create a score function for energy calculations
+    scorefxn = pyrosetta.create_score_function("ref2015_cart.wts")
+
+    # Calculate the energy of the structure to ensure proper initialization
+    scorefxn(pose)
+
+    return pose, scorefxn
 
 
 #### FastRelax Protocol - bb_unlocked
@@ -266,19 +309,40 @@ def model_sequence(pose, mutations, scorefxn):
     pack_relax(pose = new_pose, scorefxn = scorefxn)
     return new_pose, scorefxn(new_pose)
 
-def Execute(pose, dataframe, chain, scorefxn):
+def Execute(pdb, dataframe, chain):
     """
-    Execute the entire modeling pipeline for a set of sequences in a DataFrame, saving the results to a CSV file.
+    Perform protein sequence modeling using PyRosetta based on input data.
 
     Parameters:
-    - pose: PyRosetta Pose object
-    - dataframe: Input DataFrame with sequences
-    - chain: Chain identifier (e.g., 'A')
-    - scorefxn: Score function to evaluate the energy of the structure
+    - pdb (str): Path to the PDB file containing the initial protein structure.
+    - dataframe (pd.DataFrame): DataFrame containing sequences to be modeled.
+    - chain (str): Chain identifier for the protein structure.
 
     Returns:
-    A DataFrame containing the modeled sequences and their binding energies.
+    - data (pd.DataFrame): DataFrame containing modeled sequences and their corresponding dG values.
+    
+    Example:
+    ```
+    pdb_file = "initial_structure.pdb"
+    sequences_to_model = pd.DataFrame({"Sequence": ["AAABBB", "CCCDDD", "EEFFGG"]})
+    chain_id = "A"
+    modeling_results = Execute(pdb_file, sequences_to_model, chain_id)
+    ```
+
+    Note:
+    - The function initializes the PyRosetta framework by calling the `read_pose` function.
+    - It reads the initial protein structure and creates a clone for subsequent modeling.
+    - For each sequence in the input DataFrame, it compares the current structure with the target sequence.
+    - Mutations needed to transform the current structure into the target sequence are determined.
+    - The sequence is modeled using the `model_sequence` function, and the resulting data is stored in a DataFrame.
+    - The execution time is recorded, and the results are saved in CSV and text files.
+
+    Reference:
+    - PyRosetta Documentation: https://graylab.jhu.edu/PyRosetta.documentation/
+
     """
+    start_time = time.time()  # Record the start time
+    pose, scorefxn = read_pose(pdb)
     pose_init = pose.clone()
     #### Reads input file with sequences to be modeled
     data = pd.DataFrame(index = range(1,len(dataframe.index)+1), columns = range(1,3))
@@ -292,6 +356,13 @@ def Execute(pose, dataframe, chain, scorefxn):
         data.iloc[i,0] = ''.join(new_pose.sequence())
         data.iloc[i,1] = dG
     data.to_csv("output.csv") 
+    
+    end_time = time.time()  # Record the end time
+    execution_time = end_time - start_time  # Calculate the execution time
+    # Write the results to a text file
+    with open("output.txt", "w") as f:
+        f.write(f"Execution Time: {round(execution_time/60, 1)} minutes\n")
+               
     return data
     
 
