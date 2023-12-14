@@ -18,19 +18,21 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import RepeatedKFold
 
 # Load the data from a CSV file
-csv_file = "/home/papaula/Documentos/Mestrado//Peptides_as_descriptors_final_withdGandMethods_v02.csv"
-data = pd.read_csv(csv_file)
-print(data)
+#csv_file = "/home/papaula/Documentos/Mestrado//Peptides_as_descriptors_final_withdGandMethods_v02.csv"
+#data = pd.read_csv(csv_file)
+#print(data)
 
 def pre_process(data):
-    dataset = data.drop_duplicates(subset = data.iloc[:,1:-3])
+    dataset = data.drop_duplicates(subset = data.iloc[:,:-1])
 
-    X = dataset.iloc[:,1:-3]
+    X = dataset.iloc[:,:-2]
     y = dataset['dG']
 
     # Split the data into training and testing sets with a random split
     x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
+    
+    erro_df = pd.DataFrame(x_test)
+    
     #### Get Mean, SD values for Z-score norms
     scaler = StandardScaler()
     scaler.fit(x_train)
@@ -38,8 +40,7 @@ def pre_process(data):
     x_train_norm = scaler.transform(x_train)
     x_test_norm = scaler.transform(x_test)
     StandardScaler()
-    return x_train_norm, x_test_norm, y_train, y_test
-
+    return x_train_norm, x_test_norm, y_train, y_test, erro_df
 
 def num_k(data,percent=0.1):
     '''Parâmetros:  
@@ -50,7 +51,7 @@ def num_k(data,percent=0.1):
     '''
     data = pd.DataFrame(data)
     if len(data.columns) > percent*len(data):
-        numk = percent*len(data)
+        numk = int(percent*len(data))
     else:
         numk =len(data.columns)
     return numk
@@ -77,7 +78,6 @@ def select_best_K_(ka,x_train_normalized,x_test_norm,y_train):
 
     return x_train_normalized_newF, x_test_normalized_newF
 
-
 def lassocv_reg(x_train_normalized_newF, x_test_normalized_newF, y_train, y_test):
     
     folds = 10
@@ -95,7 +95,7 @@ def lassocv_reg(x_train_normalized_newF, x_test_normalized_newF, y_train, y_test
     eps=1e-04,
     cv=rkf_grid,
     n_alphas=1000,
-    n_jobs=8,)
+    n_jobs=10,)
     
     x_train_norm = pd.DataFrame(x_train_normalized_newF)
     x_test_norm = pd.DataFrame(x_test_normalized_newF)
@@ -115,16 +115,22 @@ def lassocv_reg(x_train_normalized_newF, x_test_normalized_newF, y_train, y_test
     # Avalie o desempenho do modelo (por exemplo, calculando o erro quadrático médio)
     mse = mean_squared_error(y_test, y_pred)
     
-    ytrain = pd.DataFrame(y_train)
-    ytrain["y_pred"] = y_pred
+    return mse, coefficients,best_alpha,y_pred,y_test
+
+def modelo_regressao(dados_desc):
+
+    x_train_norm, x_test_norm, y_train, y_test, erro_df = pre_process(dados_desc)
     
-    return ytrain, mse, coefficients, best_alpha
+    ka = num_k(x_train_norm,0.1)
 
+    x_train_normalized_newF, x_test_normalized_newF = select_best_K_(ka,x_train_norm,x_test_norm,y_train)
 
-x_train_norm, x_test_norm, y_train, y_test = pre_process(data)
+    mse, coefficients,best_alpha,y_pred,y_test = lassocv_reg(x_train_normalized_newF,x_test_normalized_newF, y_train, y_test)
+    
+    y_Test_copia = y_test.copy()
+    y_Test_copia.reset_index(drop=True, inplace=True)
+    dados_erro = pd.DataFrame(y_pred)
+    dados_erro["test"] =  y_Test_copia
+    dados_erro["erro"] = dados_erro.iloc[:,0] - dados_erro.iloc[:,1]
 
-ka = num_k(x_train_norm,0.1)
-
-x_train_normalized_newF, x_test_normalized_newF = select_best_K_(ka,x_train_norm,x_test_norm,y_train)
-
-predict_data, model_avalia = lassocv_reg(x_train_normalized_newF,x_test_normalized_newF, y_train, y_test)
+    return dados_erro, x_test_norm, best_alpha,erro_df,mse

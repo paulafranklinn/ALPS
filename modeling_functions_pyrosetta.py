@@ -210,7 +210,7 @@ def unbind(pose, partners, scorefxn):
     trans_mover = rigid.RigidBodyTransMover(pose_dummy,JUMP)
     trans_mover.step_size(STEP_SIZE)
     trans_mover.apply(pose_dummy)
-    pack_relax(pose_dummy, scorefxn)
+    #pack_relax(pose_dummy, scorefxn)
     #### Return a tuple containing:
     #### Pose binded = [0] | Pose separated = [1]
     return pose_binded , pose_dummy
@@ -306,7 +306,7 @@ def model_sequence(pose, mutations, scorefxn):
     
     for index in to_mutate:
         new_pose = mutate_repack(starting_pose = new_pose, posi = index, amino = to_mutate[index], scorefxn = scorefxn)
-    pack_relax(pose = new_pose, scorefxn = scorefxn)
+    #pack_relax(pose = new_pose, scorefxn = scorefxn)
     return new_pose, scorefxn(new_pose)
 
 def Execute(pdb, dataframe, chain):
@@ -353,7 +353,8 @@ def Execute(pdb, dataframe, chain):
         # sequence_to_compare, indexs = Get_residues_from_chain(pose = pose, chain = chain)
         # sequence_to_model = Get_residues_from_indexs(sequence = sequence, indexs = indexs)
         new_pose, dG = model_sequence(pose_init, mutations, scorefxn)
-        data.iloc[i,0] = ''.join(new_pose.sequence())
+        #data.iloc[i,0] = ''.join(new_pose.sequence())
+        data.iloc[i,0] = Get_residues_from_chain(new_pose, "P")
         data.iloc[i,1] = dG
     data.to_csv("output.csv") 
     
