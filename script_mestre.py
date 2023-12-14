@@ -36,12 +36,12 @@ scorefxn(pose)
 sequencia_original, indice_peptideo = Get_residues_from_chain(pose,"P")
 
 
-def vamo_rodar_poar(sequencia_original,estrutura_pdb,pose):
+def loop_modelo_reg(sequencia_original,estrutura_pdb,pose,n_loop):
 
     mse_list = []
     seq_gerais = []
 
-    for i in range(3):
+    for i in range(n_loop):
         seq_mut_df, posicao_mutacao, posi_mutat_todas,seq_gerais  = gerar_mutacoes(sequencia_original,seq_gerais,50,8)
 
         dado_df = Execute(estrutura_pdb, seq_mut_df, "P")
