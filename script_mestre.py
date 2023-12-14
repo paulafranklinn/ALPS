@@ -22,10 +22,10 @@ from rosetta.core.pack.task import operation
 pyrosetta.init()
 
 ## Functions
-from gerador__de_seq import gerar_mutacoes
+from gerador_de_seq import gerar_mutacoes
 from descriptor import assign_descriptor,get_descriptors
 from modeling_functions_pyrosetta import mutate_repack, model_sequence, Execute, Get_residues_from_chain
-from Modelo_MLR import pre_process,num_k,select_best_K_,lassocv_reg,modelo_regressao
+from Modelo_MLR_peptide import pre_process,num_k,select_best_K_,lassocv_reg,modelo_regressao
 
 
 ## arquivos importantes
