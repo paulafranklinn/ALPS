@@ -18,7 +18,7 @@ import csv
 import pandas as pd
 import numpy as np
 
-def gerar_mutacoes(sequencia_original,seq_gerais,n_popul,n_mut):
+def gerar_mutacoes(sequencia_original,dados_seq_anteriores,n_popul,n_mut):
     
     ## variáveis
     sequencias_mutadas = []
@@ -39,14 +39,14 @@ def gerar_mutacoes(sequencia_original,seq_gerais,n_popul,n_mut):
             
         sequencia_mutada = ''.join(sequencia_mutada)
         
-        if sequencia_mutada not in sequencias_mutadas and sequencia_mutada not in seq_gerais:            
+        if sequencia_mutada not in sequencias_mutadas and sequencia_mutada not in dados_seq_anteriores:            
             sequencias_mutadas.append(sequencia_mutada)
-            seq_gerais.append(sequencia_mutada)
-        porcentagem_concluida = (len(sequencias_mutadas) / n_popul) * 100
-        print(f"({porcentagem_concluida:.2f}% concluído)")
-    seq_mut_df = pd.DataFrame(sequencias_mutadas)
 
-    return seq_mut_df, posicao_mutacao, posi_mutat_todas,seq_gerais
+        #porcentagem_concluida = (len(sequencias_mutadas) / n_popul) * 100
+        #print(f"({porcentagem_concluida:.2f}% concluído)")
+    seq_mut_df = pd.DataFrame(sequencias_mutadas)
+    ##return seq_mut_df, posicao_mutacao, posi_mutat_todas
+    return seq_mut_df
 
 ## Como usar?
 #sequencia_original = "STIEEQAKTFLDKFNHEAEDLFYQSSLASWNYNTAAAA" ## especifica sequencia
