@@ -210,7 +210,7 @@ def unbind(pose, partners, scorefxn):
     trans_mover = rigid.RigidBodyTransMover(pose_dummy,JUMP)
     trans_mover.step_size(STEP_SIZE)
     trans_mover.apply(pose_dummy)
-    #pack_relax(pose_dummy, scorefxn)
+    pack_relax(pose_dummy, scorefxn)
     #### Return a tuple containing:
     #### Pose binded = [0] | Pose separated = [1]
     return pose_binded , pose_dummy
@@ -306,7 +306,7 @@ def model_sequence(pose, mutations, scorefxn):
     
     for index in to_mutate:
         new_pose = mutate_repack(starting_pose = new_pose, posi = index, amino = to_mutate[index], scorefxn = scorefxn)
-    #pack_relax(pose = new_pose, scorefxn = scorefxn)
+    pack_relax(pose = new_pose, scorefxn = scorefxn)
     dg = Dg_bind(new_pose, "A_P", scorefxn)
     return new_pose, dg
 
