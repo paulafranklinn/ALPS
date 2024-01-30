@@ -21,7 +21,6 @@ from pyrosetta import *
 from rosetta.core.pack.task import TaskFactory
 from rosetta.core.pack.task import operation
 
-
 pyrosetta.init()
 
 ## Funções
@@ -41,9 +40,12 @@ sequencia_original, indice_peptideo = Get_residues_from_chain(pose,"P")
 # Configuração básica do logger
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def vamo_rodar_poar(sequencia_original,estrutura_pdb,n_loop,seq_numb):
+def vamo_rodar_poar(sequencia_original,estrutura_pdb,n_loop,seq_numb,replica):
     start_time = time.time()  # Record the start time
     logging.debug('Iniciando a função vamo_rodar_poar')
+
+    ## Criando pastas para replicatas
+    os.mkdir(f'replica_{replica}')
 
     mse_list = []
     df_dados_gerais = pd.DataFrame()
@@ -84,7 +86,7 @@ def vamo_rodar_poar(sequencia_original,estrutura_pdb,n_loop,seq_numb):
 
         DFF = pd.DataFrame(DF_desc.reset_index())
         Dados_modelo = DFF.iloc[:,1:]
-        Dados_modelo.to_csv(f'Dados_modelo{i}.csv')
+        Dados_modelo.to_csv(f'replica_{replica}/Dados_modelo{i}_replica_{replica}.csv')
 
         logging.debug('Executando o modelo de regressão')
         x_train_normalized_newF,y_train, x_test_normalized_newF, y_test,y_pred,dados_erro,best_alpha,mse,coefficients,erro_df,lasso_cv,cl,dados_gerais_por_ciclo_df = modelo_regressao(Dados_modelo,i)
@@ -99,7 +101,7 @@ def vamo_rodar_poar(sequencia_original,estrutura_pdb,n_loop,seq_numb):
 
         logging.debug('Criando arquivos dos datasets')
         # Criar um nome de arquivo único para cada ciclo
-        nome_arquivo = f'Output/dados_dataset_treino_teste_ciclo_{i}.pkl'
+        nome_arquivo = f'replica_{replica}/dados_dataset_treino_teste_ciclo_{i}_replica_{replica}.pkl'
 
         # Criar um nome de arquivo único para cada ciclo
         with open(nome_arquivo, 'wb') as arquivo:
@@ -107,7 +109,7 @@ def vamo_rodar_poar(sequencia_original,estrutura_pdb,n_loop,seq_numb):
 
         logging.debug('Criando arquivos de infos do modelo')
         # Criar um nome de arquivo único para cada ciclo
-        nome_arquivo_1 = f'Output/dados_infos_modelo_ciclo_{i}.pkl'
+        nome_arquivo_1 = f'replica_{replica}/dados_infos_modelo_ciclo_{i}_replica_{replica}.pkl'
 
         # Criar um nome de arquivo único para cada ciclo
         with open(nome_arquivo_1, 'wb') as arquivos:
@@ -155,10 +157,10 @@ def vamo_rodar_poar(sequencia_original,estrutura_pdb,n_loop,seq_numb):
     execution_time = end_time - start_time  # Calculate the execution time
     
     df_seq_originais = pd.DataFrame(sequencias_start)
-    df_seq_originais.to_csv('df_seq_originais.csv')                                 
+    df_seq_originais.to_csv(f'replica_{replica}/df_seq_originais_replica_{replica}.csv')                                 
 
     logging.debug('Criando CSV com infos gerais')
-    all_data.to_csv('df_dados_gerais.csv')
+    all_data.to_csv(f'replica_{replica}/df_dados_gerais_replica_{replica}.csv')
 
     logging.debug('Finalizando a função vamo_rodar_poar')
 
@@ -168,7 +170,7 @@ def vamo_rodar_poar(sequencia_original,estrutura_pdb,n_loop,seq_numb):
             
     return mse_list
 
-exemplo = vamo_rodar_poar(sequencia_original,estrutura_pdb,20,50)
+exemplo = vamo_rodar_poar(sequencia_original,estrutura_pdb,20,50,1)
 
 
 
