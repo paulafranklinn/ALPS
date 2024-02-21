@@ -18,15 +18,20 @@ import csv
 import pandas as pd
 import numpy as np
 
-def gerar_mutacoes(sequencia_original,dados_seq_anteriores,n_popul,n_mut):
+def gerar_mutacoes(sequencia_original,dados_seq_anteriores,n_popul,n_mut,list_para_mutar):
     
     ## variáveis
     sequencias_mutadas = []
     seq_mut_df = 0
     posi_mutat_todas= []
 
+    if list_para_mutar != 0:
+        posi_para_mut = list_para_mutar
+    else:
+        posi_para_mut = range(len(sequencia_original))
+
     while len(sequencias_mutadas) < n_popul:
-        posicao_mutacao = random.sample(range(len(sequencia_original)),k=n_mut)
+        posicao_mutacao = random.sample(posi_para_mut,k=n_mut)
         posi_mutat_todas.append(posicao_mutacao)
         novo_aminoacido = random.choices("ACDEFGHIKLMNPQRSTVWY",k=n_mut)
 
