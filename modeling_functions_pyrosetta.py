@@ -210,7 +210,7 @@ def unbind(pose, partners, scorefxn):
     trans_mover = rigid.RigidBodyTransMover(pose_dummy,JUMP)
     trans_mover.step_size(STEP_SIZE)
     trans_mover.apply(pose_dummy)
-    pack_relax(pose_dummy, scorefxn)
+    #pack_relax(pose_dummy, scorefxn)
     #### Return a tuple containing:
     #### Pose binded = [0] | Pose separated = [1]
     return pose_binded , pose_dummy
@@ -285,7 +285,7 @@ def Compare_sequences(before_seq, after_seq, indexes):
     for index, (res1, res2) in enumerate(zip(wt, mut)):
         if res1 != res2:
             mutation[indexes[index]] = res2
-            print(f"New mutation \U0001f600 : {res1}{indexes[index]}{res2}")
+            #print(f"New mutation \U0001f600 : {res1}{indexes[index]}{res2}")
     return mutation
 
 
@@ -306,9 +306,29 @@ def model_sequence(pose, mutations, scorefxn):
     
     for index in to_mutate:
         new_pose = mutate_repack(starting_pose = new_pose, posi = index, amino = to_mutate[index], scorefxn = scorefxn)
-    pack_relax(pose = new_pose, scorefxn = scorefxn)
-    dg = Dg_bind(new_pose, "A_P", scorefxn)
+    #pack_relax(pose = new_pose, scorefxn = scorefxn)
+    dg = Dg_bind(new_pose, "A_D", scorefxn)
     return new_pose, dg
+
+def Get_residues_from_pose(pose):
+    """
+    Get the sequence and residue numbers for a specific chain in a given pose.
+
+    Parameters:
+    - pose: PyRosetta Pose object
+    - chain: Chain identifier (e.g., 'A')
+
+    Returns:
+    A tuple containing the chain sequence and a list of residue numbers.
+    """
+    
+    residue_numbers = [residue for residue in range(1, pose.size() + 1)]
+    sequence = ''.join([pose.residue(residue).name1() for residue in residue_numbers])
+
+    # residue_numbers = [residue for residue in range(1, pose.size() + 1) if pose.pdb_info().chain(residue) == chain]
+    # chain_sequence = ''.join([pose.residue(residue).name1() for residue in residue_numbers])
+    
+    return sequence, residue_numbers
 
 def Execute(pdb, dataframe, chain):
     """
@@ -349,16 +369,16 @@ def Execute(pdb, dataframe, chain):
     data = pd.DataFrame(index = range(1,len(dataframe.index)+1), columns = range(1,3))
     for i in range(0, len(dataframe.index)):
         sequence = dataframe.iloc[i,0]
-        residues_from_chain, index = Get_residues_from_chain(pose = pose, chain = chain)
+        residues_from_chain, index = Get_residues_from_pose(pose = pose)
         mutations = Compare_sequences(before_seq = residues_from_chain, after_seq = sequence, indexes = index)
         # sequence_to_compare, indexs = Get_residues_from_chain(pose = pose, chain = chain)
         # sequence_to_model = Get_residues_from_indexs(sequence = sequence, indexs = indexs)
         new_pose, dG = model_sequence(pose_init, mutations, scorefxn)
         
         #data.iloc[i,0] = ''.join(new_pose.sequence())
-        data.iloc[i,0] = Get_residues_from_chain(new_pose, "P")
+        data.iloc[i,0] = Get_residues_from_pose(new_pose)
         data.iloc[i,1] = dG
-    data.to_csv("output.csv") 
+    data.to_csv("output.csv")
     
     end_time = time.time()  # Record the end time
     execution_time = end_time - start_time  # Calculate the execution time
@@ -367,6 +387,8 @@ def Execute(pdb, dataframe, chain):
         f.write(f"Execution Time: {round(execution_time/60, 1)} minutes\n")
                
     return data
+
+
     
 
 

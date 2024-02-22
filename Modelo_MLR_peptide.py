@@ -16,6 +16,8 @@ from sklearn.linear_model import LassoCV
 ## analise dos modelos
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import RepeatedKFold
+#from sklearn.feature_selection import VarianceThreshold
+
 
 # Load the data from a CSV file
 #csv_file = "/home/papaula/Documentos/Mestrado//Peptides_as_descriptors_final_withdGandMethods_v02.csv"
@@ -30,7 +32,7 @@ def pre_process(data,i):
 
     X = dataset.iloc[:,:-2]
     y = dataset['dG']
-
+    
     # Split the data into training and testing sets with a random split
     x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=num_seed)
     
@@ -57,7 +59,7 @@ def pre_process(data,i):
     dados_gerais_norm = scaler.transform(descr_data_)
     dados_gerais_norm = pd.DataFrame(dados_gerais_norm)
     StandardScaler()
-
+    
     return x_train_norm, x_test_norm, y_train, y_test, erro_df,descr_data,dados_gerais_df,dados_gerais_norm
 
 def num_k(data,percent=0.1):
