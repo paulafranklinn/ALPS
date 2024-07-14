@@ -61,11 +61,23 @@ def resi_index_PDB_to_rosetta(pose,list_chain,list_residue):
     
     df_index = PDB_pose_dictionairy(pose)
     y = pd.DataFrame()
-    for k in range(len(list_chain)):
-        for o in range(len(list_residue[k])):
-            mask = (df_index["Chain"] == list_chain[k]) & (df_index["IndexPDB"] == list_residue[k][o])
+    
+    if len(list_chain) > 1:      
+    
+        ## This is for more than one chain
+        for k in range(len(list_chain)):
+            for o in range(len(list_residue[k])):
+                mask = (df_index["Chain"] == list_chain[k]) & (df_index["IndexPDB"] == list_residue[k][o])
+                subset_df = df_index.loc[mask, ["IndexPose"]]
+                y = pd.concat([y, subset_df])
+                
+    else:
+        ## This is for just one chain is change
+        for residue in list_residue:
+            mask = (df_index["Chain"] == list_chain[0]) & (df_index["IndexPDB"] == residue)
             subset_df = df_index.loc[mask, ["IndexPose"]]
             y = pd.concat([y, subset_df])
-            
+
     index_rosetta = y.reset_index(drop=True)
+    
     return index_rosetta

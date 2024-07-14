@@ -1,220 +1,194 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr 22 09:27:13 2024
+
+@author: papaula
+"""
 
 import os
-os.chdir("/home/papaula/Documents/Projetos/Mestrado/peptide_machine/")
-
-## bibliotecas
-import numpy as np
-from numpy.random import uniform
-from random import sample
 import pandas as pd
 from random import choices
 from tqdm import tqdm
-from time import sleep
-import pickle
-
 import time
 import logging
+import argparse
 
-#### Importing rosetta functions
+# Importando funções do Rosetta
 from pyrosetta import *
 from rosetta.core.pack.task import TaskFactory
 from rosetta.core.pack.task import operation
 
+# Inicializando o PyRosetta
 pyrosetta.init()
 
-## Funções
-
+# Importando funções personalizadas
 from gerador_de_sequencia import gerar_mutacoes
-from feature_extraction import assign_descriptor, get_descriptors
-from modeling_functions_pyrosetta import mutate_repack, model_sequence, Execute,Get_residues_from_pose, Dg_bind
-from Modelo_MLR_peptide import pre_process,num_k,select_best_K_,lassocv_reg,modelo_regressao
-from index_PDB_to_pyRosetta import resi_index_PDB_to_rosetta,PDB_pose_dictionairy
-
-## arquivos importantes
-estrutura_pdb = "/home/papaula/Documents/Projetos/Mestrado/Outputs_rieux/peptide_machine/CD19_scFv_relax.pdb"
-pose = pose_from_pdb(estrutura_pdb)
-scorefxn = pyrosetta.create_score_function("ref2015_cart.wts")
-scorefxn(pose)
-sequencia_original, indice_peptideo = Get_residues_from_pose(pose)
+from feature_extraction import get_descriptors
+from Modelo_MLR_peptide import modelo
+from Modeling_functions_pyrosetta import Get_residues_from_pose
+from index_PDB_to_pyRosetta import resi_index_PDB_to_rosetta
+from check_and_retrieve import batchs_to_run
 
 # Configuração básica do logger
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-list_chain = ['D','C']
-list_residue = [(62,63,64,65,66,67,68,69,70,71,72,88,89,90,91,92,93,94,127,128,129,130,131,132,133,134,135),(186,187,188,189,190,191,192,212,213,214,215,216,257,258,259,260,261,262,263,264,265,266,267,268,269)]
+def peptide_machine(pose, n_loop, seq_numb, replica, list_residue, list_chain, chain, cpu, model):
 
+    start_time = time.time()  # Registro do tempo de início
+    logging.debug('Starting the Imunobologyc machine')
+    
+    # Criando pastas para réplicas
+    current_directory = os.getcwd()
+    dir_name = 'dados_gerados'
+    dir_name_pdb = 'PDBs'
 
-def vamo_rodar_poar(sequencia_original,estrutura_pdb,n_loop,seq_numb,replica,list_residue,list_chain):
-    
-    '''
-    #########################################
-    #                                       #
-    #     Proximo competidor do Rosetta     #
-    #            Active Learning            #
-    # Criaturas: Paula, Lucas, Joao e Rocio #
-    #                                       #
-    #########################################
-    '''
-    
-    ## Variaveis da funcao:
-    # Sequencia_original -> sequencia do complexo utilizado
-    # estrutura_pdb -> estrutura do complexo
-    # n_loop -> numero de loops selecionados
-    # seq_numb -> numero de sequencias geradas por ciclo
-    # replica -> numero da replica testada
-    # list_residue -> lista contendo os residuos que serao mutados. Ex: [(1,2,3),(4,5,6)]
-    # list_chain -> lista contendo cadeias que serao mutadas. Ex ['A','B']
-    ## Como rodar?
-    
-    
-    start_time = time.time()  # Record the start time
-    logging.debug('Iniciando a função vamo_rodar_poar')
+    # Verifica se o diretório existe, se não, cria
+    if not os.path.exists(os.path.join(current_directory, dir_name)):
+        os.mkdir('dados_gerados')
 
-    ## Criando pastas para replicatas
-    os.mkdir(f'replica_{replica}')
-
-    ## Variaveis necessarias:
+    if not os.path.exists(os.path.join(current_directory, dir_name_pdb)):
+        os.mkdir('PDBs')
+    
+    # Inicialização de variáveis necessárias
     mse_list = []
     df_dados_gerais = pd.DataFrame()
     DF_seq = pd.DataFrame()
     DF_desc = pd.DataFrame()
     DG_df = pd.DataFrame()
-    list_seq = []
     sequencias_start = []
-    #num_residuos_totais = len(list_para_mutar)
+    list_seq = []
     
-    ## Conversao de index PDB para Rosetta
-    index_rosetta = resi_index_PDB_to_rosetta(pose,list_chain,list_residue)
+    # Conversão de índice PDB para Rosetta
+    index_rosetta = resi_index_PDB_to_rosetta(pose, list_chain, list_residue)
     
+    # Salvando a sequência original
+    sequencia_original, indice_peptideo = Get_residues_from_pose(pose)
     sequencias_start.append(sequencia_original)
     
-    ## Contagem do total de residuos para mutaçao:
-    total_resi = 0
-    numb_chain = len(list_residue)
-    for y in range(numb_chain):
-        total_resi += len(list_residue[y])
-        
-    num_residuos_totais = total_resi
-
-    index_rosetta = index_rosetta - 1
+    # Contagem do total de resíduos para mutação
+    if len(list_chain) > 1:  # Conta todos os resíduos em todas as cadeias
+        total_resi = sum(len(res) for res in list_residue)
+        num_residuos_totais = total_resi
+    else:
+        num_residuos_totais = len(list_residue)
     
+    # Subtrai 1 de cada índice de resíduo para obter a posição correta
+    index_rosetta = index_rosetta - 1
     list_para_mutar = list(index_rosetta.iloc[:,0])
     
-    ## adicionando dados de sequencias usadas para a mutação
+    # Gerando mutações iniciais
     logging.info('Gerando mutações iniciais')
-    seq_mut_df = gerar_mutacoes(sequencia_original,list_seq,seq_numb,total_resi,list_para_mutar)
-    
-    #seq_mut_df = gerar_mutacoes(sequencia_original,list_seq,seq_numb,index_rosetta)
-    
+    seq_mut_df, list_seq = gerar_mutacoes(sequencia_original, list_seq, seq_numb, num_residuos_totais, list_para_mutar)  
 
-    for i in range(n_loop):
+    for i in tqdm(range(n_loop), desc="Processing loops"):
+        
         logging.info(f'Iteração {i+1}/{n_loop}')
-
-        logging.debug('Executando a função Execute')
-        dado_df = Execute(estrutura_pdb,seq_mut_df, "P")
-        dg_ini = pd.DataFrame(dado_df[2]).reset_index()
-        DG_df = pd.concat([DG_df,dg_ini[2]])
-
+        logging.debug('Modeling and calculating dG')
+        
+        lista_sequence_to_modeling = list(seq_mut_df.iloc[:,0])
+        sequence_cycle, dG_cycle = batchs_to_run(pose, lista_sequence_to_modeling, cpu, chain, i)
+        
+        dg_ini = pd.DataFrame(dG_cycle)
+        DG_df = pd.concat([DG_df, dg_ini])
+        
         logging.debug('Convertendo em descritores')
-        dados_seq =list(seq_mut_df[0])
-        data_descriptors = get_descriptors(dados_seq,'vhse')
+        dados_seq = list(seq_mut_df[0])
+        data_descriptors = get_descriptors(dados_seq, 'vhse')
         data_d = pd.DataFrame(data_descriptors)
-        DF_desc = pd.concat([DF_desc,data_d])
-
+        DF_desc = pd.concat([DF_desc, data_d])
+        
         seque_df = pd.DataFrame(seq_mut_df)
-        DF_seq = pd.concat([DF_seq,seque_df])
-
-        ##Adequanto outputs do get_descriptors para a funçao modelo_regressão
+        DF_seq = pd.concat([DF_seq, seque_df])
+        
+        # Adequando outputs do get_descriptors para a função modelo_regressão
         DF_desc['dG'] = DG_df
         DF_desc['seq'] = DF_seq
-
+        
         DFF = pd.DataFrame(DF_desc.reset_index())
         Dados_modelo = DFF.iloc[:,1:]
-        Dados_modelo.to_csv(f'replica_{replica}/Dados_modelo{i}_replica_{replica}.csv')
-
-        logging.debug('Executando o modelo de regressão')
-        x_train_normalized_newF,y_train, x_test_normalized_newF, y_test,y_pred,dados_erro,best_alpha,mse,coefficients,erro_df,lasso_cv,cl,dados_gerais_por_ciclo_df = modelo_regressao(Dados_modelo,i)
-
-        df_dados_gerais = pd.concat([df_dados_gerais,dados_gerais_por_ciclo_df])
+        
+        logging.debug(f'Executando o modelo de {modelo}')
+        dados_gerais_por_ciclo_df, mse = modelo(Dados_modelo, i, replica, model)
+                
+        df_dados_gerais = pd.concat([df_dados_gerais, dados_gerais_por_ciclo_df])
         df_dados_gerais_ = pd.DataFrame(df_dados_gerais.reset_index())
         all_data = df_dados_gerais_.iloc[:,1:]
-        all_data.to_csv(f'replica_{replica}/df_dados_gerais_preliminares.csv')
-
-        logging.debug('Salvando arquivos em uma lista')
-        list_data_all = [x_train_normalized_newF,y_train, x_test_normalized_newF, y_test]
-        list_data_model = [best_alpha,mse,coefficients,lasso_cv,cl]
-
-        logging.debug('Criando arquivos dos datasets')
-        # Criar um nome de arquivo único para cada ciclo
-        nome_arquivo = f'replica_{replica}/dados_dataset_treino_teste_ciclo_{i}_replica_{replica}.pkl'
-
-        # Criar um nome de arquivo único para cada ciclo
-        with open(nome_arquivo, 'wb') as arquivo:
-            pickle.dump(list_data_all, arquivo)
-
-        logging.debug('Criando arquivos de infos do modelo')
-        # Criar um nome de arquivo único para cada ciclo
-        nome_arquivo_1 = f'replica_{replica}/dados_infos_modelo_ciclo_{i}_replica_{replica}.pkl'
-
-        # Criar um nome de arquivo único para cada ciclo
-        with open(nome_arquivo_1, 'wb') as arquivos:
-            pickle.dump(list_data_model, arquivos)
-
+        all_data.to_csv('dados_gerados/df_dados_gerais_preliminares.csv')
+        
         mse_list.append(mse)
-
-        logging.debug('Testando se o erro é aqui')
-
-        if i != n_loop-1:
+        
+        if i != n_loop - 1:
             df_novas_muts = all_data[all_data["Ciclo"] == i].reset_index()
             df_novas_muts_ = df_novas_muts.iloc[:,1:]
             df_dados_erro_sorteio = pd.DataFrame()
-            df_dados_erro_sorteio["seq"] =  df_novas_muts_["seq"]
+            
+            df_dados_erro_sorteio["seq"] = df_novas_muts_["seq"]
             df_dados_erro_sorteio["erro_modelo"] = df_novas_muts_["erro_modelo"].abs()
-
-            ## Sorteio da sequencia
-            seq_ini = choices(df_dados_erro_sorteio["seq"],df_dados_erro_sorteio["erro_modelo"], k=1)
+            
+            # Sorteio da sequência
+            seq_ini = choices(df_dados_erro_sorteio["seq"], df_dados_erro_sorteio["erro_modelo"], k=1)
+            
             logging.debug(f'Sequencia sorteada: {sequencia_original}')
+            
             sequencia_original = seq_ini[0]
             sequencias_start.append(sequencia_original)
-
-            ###### Seleção do numero de mutações
-            ## Sequencia com maior erro
+            
+            # Seleção do número de mutações
             erro_sort = df_dados_erro_sorteio[df_dados_erro_sorteio["seq"] == sequencia_original]
-            ## Erro
             Err_sorteado = erro_sort.iloc[0,1]
-            ## Erro maximo
             erro_max = max(df_dados_erro_sorteio["erro_modelo"])
-            ## Proporção de erro por numero de resíduos
-            Proporcao = (num_residuos_totais/erro_max)
-            ## Seleção do numero de mutações
-            X_num = round(Err_sorteado*Proporcao)
-            N_mut_ = num_residuos_totais-X_num
-            ## Caso o modelo erre muito, essa condição garante que ocorra ao menos UMA mutação
+            Proporcao = (num_residuos_totais / erro_max)
+            X_num = round(Err_sorteado * Proporcao)
+            N_mut_ = num_residuos_totais - X_num
+            
             if N_mut_ < 1:
                 N_mut = 1
             else:
                 N_mut = N_mut_
-            ## Gera novas mutações
-            seq_mut_df = gerar_mutacoes(sequencia_original,list_seq,seq_numb,N_mut,list_para_mutar)
-
-    #### Colocar no final da função, antes do return
-    end_time = time.time()  # Record the end time
-    execution_time = end_time - start_time  # Calculate the execution time
-
+            
+            seq_mut_df, list_seq = gerar_mutacoes(sequencia_original, list_seq, seq_numb, N_mut, list_para_mutar)  
+    
+    # Finaliza a função e grava os resultados
+    end_time = time.time()  # Registro do tempo de fim
+    execution_time = end_time - start_time  # Cálculo do tempo de execução
+    
     df_seq_originais = pd.DataFrame(sequencias_start)
-    df_seq_originais.to_csv(f'replica_{replica}/df_seq_originais_replica_{replica}.csv')
-
+    df_seq_originais.to_csv(f'dados_gerados/df_seq_originais_replica_{replica}.csv')
+    
     logging.debug('Criando CSV com infos gerais')
-    all_data.to_csv(f'replica_{replica}/df_dados_gerais_replica_{replica}.csv')
-
+    all_data.to_csv(f'dados_gerados/df_dados_gerais_replica_{replica}.csv')
+    
     logging.debug('Finalizando a função vamo_rodar_poar')
-
-    # Write the results to a text file
+    
+    # Escreve o tempo de execução em um arquivo de texto
     with open("exec_time.txt", "w") as f:
         f.write(f"Execution Time: {round(execution_time/60, 1)} minutes\n")
-
+    
     return mse_list
 
-teste = vamo_rodar_poar(sequencia_original,estrutura_pdb,3,50,0,list_residue,list_chain)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Run peptide machine simulation.')
+    parser.add_argument('--estrutura_pdb', type=str, required=True, help='Path to the PDB structure file.')
+    parser.add_argument('--n_loop', type=int, required=True, help='Number of loops.')
+    parser.add_argument('--seq_numb', type=int, required=True, help='Number of sequences.')
+    parser.add_argument('--replica', type=int, required=True, help='Replica number.')
+    parser.add_argument('--list_residue', type=int, nargs='+', required=True, help='List of residues.')
+    parser.add_argument('--list_chain', type=str, nargs='+', required=True, help='List of chains.')
+    parser.add_argument('--chain', type=str, required=True, help='Chain identifier.')
+    parser.add_argument('--cpu', type=int, required=True, help='Number of CPUs to use.')
+    parser.add_argument('--model', type=str, required=True, help='Model to use.')
 
+    args = parser.parse_args()
 
+    pose = pose_from_pdb(args.estrutura_pdb)
+    
+    teste = peptide_machine(pose=pose,
+                            n_loop=args.n_loop,
+                            seq_numb=args.seq_numb,
+                            replica=args.replica,
+                            list_residue=args.list_residue,
+                            list_chain=args.list_chain,
+                            chain=args.chain,
+                            cpu=args.cpu,
+                            model=args.model)
