@@ -1,25 +1,57 @@
-# Peptide Machine width="30">
+# Peptide Machine
 
-# Usage 
+Welcome to the Peptide Machine project! This repository contains all the necessary scripts and instructions to run the Peptide Machine. Please follow the instructions below to set up your environment and run the script.
 
-## function_peptide.R 
+## Table of Contents
 
-Função que recorta peptídeos de interesse, usando como métrica a distância de residuos de interesse.
+- [Installation](#installation)
+  - [Using .yml File](#using-yml-file)
+  - [Installing Rosetta](#installing-rosetta)
+  - [Installing PyRosetta](#installing-pyrosetta)
+- [Running the Script](#running-the-script)
+- [Resources](#resources)
 
-## Gerador_de_seq
+## Installation
 
-Gera uma população de sequencias únicas através da adição de n mutações na sequencia desejada.
+### Using .yml File
 
-## modeling_functions_pyrosetta.py
+To set up your environment using the provided `.yml` file, follow these steps:
 
-Python set of functions used to model sequences and output the dG values into a Pandas dataframe and .csv file. 
-Reads a dataframe containing the sequences and a PDB to use the structure as a template. Example input and output file can be found in the "testing_data" folder.
+1. Clone the repository:
+    ```sh
+    git clone https://github.com/yourusername/peptide-machine.git
+    cd peptide-machine
+    ```
 
-## Feature_extraction
+2. Create the environment:
+    ```sh
+    conda env create -f environment.yml
+    ```
 
-Converte peptídeos em descritores
+3. Activate the environment:
+    ```sh
+    conda activate peptide-machine
+    ```
 
-## Modelo_MLR_peptide
+### Installing Rosetta
 
-Tem funções de pre-processamento, seleção do numero de k para o select k best e um modelo de regressão linear multipla (lasso).
+For instructions on how to install Rosetta, refer to this [YouTube video](https://www.youtube.com/watch?v=UEaFmUMEL9c&t=16s).
 
+### Installing PyRosetta
+
+Download and install PyRosetta from [this link](https://graylab.jhu.edu/download/PyRosetta4/archive/release/PyRosetta4.Release.python310.linux/).
+
+## Running the Script
+
+Once you have your environment set up, you can edit and run the Peptide Machine script using the following command:
+
+```sh
+python seu_script.py --estrutura_pdb /BACKUP/dados/Projetos/Mestrado/scripts_atualizados/Mestrado/estruturas_iniciais/3mre_recortada_relax.pdb \
+                     --n_loop 2 \
+                     --seq_numb 8 \
+                     --replica 0 \
+                     --list_residue [1 2 3 4 5 6 7 8 9] \
+                     --list_chain P \
+                     --chain A_P \
+                     --cpu 4 \
+                     --model RF
