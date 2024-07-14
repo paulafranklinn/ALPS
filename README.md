@@ -19,7 +19,7 @@ To set up your environment using the provided `.yml` file, follow these steps:
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/peptide-machine.git
+    git clone https://github.com/paulafranklinn/ALPS.git
     cd peptide-machine
     ```
 
