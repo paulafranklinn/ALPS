@@ -30,7 +30,7 @@ To set up your environment using the provided `.yml` file, follow these steps:
 
 3. Activate the environment:
     ```sh
-    conda activate peptide-machine
+    conda activate ALPS-env
     ```
 
 ### Installing Rosetta
