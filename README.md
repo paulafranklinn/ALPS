@@ -8,6 +8,7 @@ Welcome to the Peptide Machine project! This repository contains all the necessa
   - [Using .yml File](#using-yml-file)
   - [Installing Rosetta](#installing-rosetta)
   - [Installing PyRosetta](#installing-pyrosetta)
+  - [Pbee](#Pbee)
 - [Running the Script](#running-the-script)
 - [Resources](#resources)
 
@@ -40,6 +41,10 @@ For instructions on how to install Rosetta, refer to this [YouTube video](https:
 ### Installing PyRosetta
 
 Download and install PyRosetta from [this link](https://graylab.jhu.edu/download/PyRosetta4/archive/release/PyRosetta4.Release.python310.linux/).
+
+### Pbee
+
+To measure the binding free energy, we use the Protein Binding Energy Estimator (Pbee). Therefore, it is necessary to add it to the same folder as this repository. It can be obtained from this [link](https://github.com/chavesejf/pbee).
 
 ## Running the Script
 
