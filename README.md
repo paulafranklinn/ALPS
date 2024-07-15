@@ -1,6 +1,6 @@
-# Peptide Machine
+# Active Learning for peptide search
 
-Welcome to the Peptide Machine project! This repository contains all the necessary scripts and instructions to run the Peptide Machine. Please follow the instructions below to set up your environment and run the script.
+Welcome to the Active Learning for peptide search (ALPS) project! This repository contains all the necessary scripts and instructions to run the ALPS. Please follow the instructions below to set up your environment and run the script.
 
 ## Table of Contents
 
@@ -48,10 +48,10 @@ To measure the binding free energy, we use the Protein Binding Energy Estimator 
 
 ## Running the Script
 
-Once you have your environment set up, you can edit and run the Peptide Machine script using the following command:
+Once you have your environment set up, you can edit and run ALPS script using the following command:
 
 ```sh
-python peptide_machine.py --estrutura_pdb exemple.pdb \
+python ALPS.py --estrutura_pdb exemple.pdb \
                      --n_loop 2 \
                      --seq_numb 8 \
                      --replica 0 \
