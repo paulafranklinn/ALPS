@@ -21,7 +21,7 @@ To set up your environment using the provided `.yml` file, follow these steps:
 1. Clone the repository:
     ```sh
     git clone https://github.com/paulafranklinn/ALPS.git
-    cd peptide-machine
+    cd ALPS
     ```
 
 2. Create the environment:
