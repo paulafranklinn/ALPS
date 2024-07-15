@@ -46,7 +46,7 @@ Download and install PyRosetta from [this link](https://graylab.jhu.edu/download
 Once you have your environment set up, you can edit and run the Peptide Machine script using the following command:
 
 ```sh
-python seu_script.py --estrutura_pdb /BACKUP/dados/Projetos/Mestrado/scripts_atualizados/Mestrado/estruturas_iniciais/3mre_recortada_relax.pdb \
+python script_mestre.py --estrutura_pdb /BACKUP/dados/Projetos/Mestrado/scripts_atualizados/Mestrado/estruturas_iniciais/3mre_recortada_relax.pdb \
                      --n_loop 2 \
                      --seq_numb 8 \
                      --replica 0 \
