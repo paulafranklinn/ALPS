@@ -51,7 +51,7 @@ To measure the binding free energy, we use the Protein Binding Energy Estimator 
 Once you have your environment set up, you can edit and run the Peptide Machine script using the following command:
 
 ```sh
-python peptide_machine.py --estrutura_pdb /BACKUP/dados/Projetos/Mestrado/scripts_atualizados/Mestrado/estruturas_iniciais/3mre_recortada_relax.pdb \
+python peptide_machine.py --estrutura_pdb exemple.pdb \
                      --n_loop 2 \
                      --seq_numb 8 \
                      --replica 0 \
