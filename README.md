@@ -1,6 +1,6 @@
-# Active Learning for peptide search
+# Active Learning for protein search
 
-Welcome to the Active Learning for peptide search (ALPS) project! This repository contains all the necessary scripts and instructions to run the ALPS. Please follow the instructions below to set up your environment and run the script.
+Welcome to the Active Learning for protein search (ALPS) project! This repository contains all the necessary scripts and instructions to run the ALPS. Please follow the instructions below to set up your environment and run the script.
 
 ## Table of Contents
 
