@@ -21,14 +21,14 @@ from tqdm import tqdm
 import time
 from Modeling_functions_pyrosetta import Execute
 
-def Run_all_batches(pose, list_seq,batch_indexes,chain,cycle):
+def Run_all_batches(pose, list_seq,batch_indexes,cycle):
     pose_init = pose.clone()
     scorefxn = pyrosetta.create_score_function("ref2015_cart.wts")
     
     processes = []
 
     for x in tqdm(range(len(batch_indexes)), desc="Processing list of sequences"):
-        p = multiprocessing.Process(target=Execute,args=[pose, scorefxn,list_seq[x],batch_indexes[x],chain,cycle])
+        p = multiprocessing.Process(target=Execute,args=[pose, scorefxn,list_seq[x],batch_indexes[x],cycle])
         p.start()
         processes.append(p)
             
@@ -96,7 +96,7 @@ def run_python_script(script_path, param1, param2):
         print(f"Error running {script_path}: {e}")
 
 
-def batchs_to_run(pose,sequences,batch_size,chain,cycle):
+def batchs_to_run(pose,sequences,batch_size,cycle):
     list_seq_final = []
     list_dg_final = []
 
@@ -115,7 +115,7 @@ def batchs_to_run(pose,sequences,batch_size,chain,cycle):
         remaining_sequences = remaining_sequences[batch_size:]  # Update remaining sequences
         # Process the current batch (here, just print the sequences)
         print("Processing batch:")
-        Run_all_batches(pose, batch, batch_indexes,chain,cycle)
+        Run_all_batches(pose, batch, batch_indexes,cycle)
         ### Check it all files in list temp are in dir, if true, get sequences and dG from all 
         seqs, dgs = check_files_in_directory(".", list_files_temp)
         lista_seq.append(seqs)

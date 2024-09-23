@@ -209,7 +209,7 @@ def unbind(pose, partners, scorefxn):
     trans_mover = rigid.RigidBodyTransMover(pose_dummy,JUMP)
     trans_mover.step_size(STEP_SIZE)
     trans_mover.apply(pose_dummy)
-    #pack_relax(pose_dummy, scorefxn,1)
+    pack_relax(pose_dummy, scorefxn,1)
     #### Return a tuple containing:
     #### Pose binded = [0] | Pose separated = [1]
     return pose_binded , pose_dummy
@@ -292,7 +292,7 @@ def Compare_sequences(before_seq, after_seq, indexes):
     return mutation
 
 
-def model_sequence(pose, mutations, scorefxn,chain):
+def model_sequence(pose, mutations, scorefxn):
     """
     Model a sequence on a given pose by applying mutations and repacking.
 
@@ -309,7 +309,7 @@ def model_sequence(pose, mutations, scorefxn,chain):
     
     for index in to_mutate:
         new_pose = mutate_repack(starting_pose = new_pose, posi = index, amino = to_mutate[index], scorefxn = scorefxn)
-    #new_pose = pack_relax(new_pose,scorefxn,1)
+    new_pose = pack_relax(new_pose,scorefxn,1)
     #dg = Dg_bind(new_pose,chain,scorefxn)
     return new_pose
 
@@ -333,7 +333,7 @@ def Get_residues_from_pose(pose):
     
     return sequence, residue_numbers
 
-def Execute(pose,scorefxn,sequence,i,chain,cycle):
+def Execute(pose,scorefxn,sequence,i,cycle):
     
     print('Execute esta rodando')
     
@@ -374,19 +374,14 @@ def Execute(pose,scorefxn,sequence,i,chain,cycle):
     
     residues_from_chain, index = Get_residues_from_pose(pose = pose)
     mutations = Compare_sequences(before_seq = residues_from_chain, after_seq = sequence, indexes = index)
-    new_pose = model_sequence(pose_init, mutations,scorefxn,chain)
+    new_pose = model_sequence(pose_init, mutations,scorefxn)
     new_pose.dump_pdb(f"PDBs/{cycle}_{i}.pdb")
 
-    command = f"python3 pbee.py --ipdb ./PDBs/{cycle}_{i}.pdb --partner1 A --partner2 P --odir . --force_mode"
-    print(command)
-    subprocess.run(command, stdout=subprocess.PIPE, shell=True)
-    temp_df = pd.read_csv(f"outputs_pbee/{cycle}_{i}/dG_pred.csv")
-    score = temp_df["dG_pred"][0]
+    score = scorefxn(new_pose)
     #### linha para ler o output csv, salvar o dG na variavel score e seguir com a vida
     #score = Dg_bind(new_pose, "A_D", scorefxn)
     data = pd.DataFrame({'Sequence': [new_pose.sequence()],'dG': [score],'seq_numb': [i]})
     data.to_csv(f'temp_{i}.csv')        
-               
     return data
 
 def decision(before_pose, after_pose, scorefxn):

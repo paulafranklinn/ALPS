@@ -34,16 +34,15 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def pre_process(data,i):
+def pre_process(data,i,n_seq_test):
 
     num_seed = (42+i)
 
-    dataset = data
+    dataset = data.copy()
     
     ## dataset de treino e teste
-    X = dataset.iloc[:,:-2]
+    X = dataset.iloc[:,:-3]
     y = dataset['dG']
-    
     
     # Split the data into training and testing sets with a random split
     x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=num_seed)
@@ -52,12 +51,13 @@ def pre_process(data,i):
 
     ## Selecionar index dos dados de teste e treino
 
-    dados_gerais_df = pd.DataFrame(dataset.iloc[:,-1]) ## dados das sequencias do dataset
+    dados_gerais_df = pd.DataFrame(dataset['seq']) ## dados das sequencias do dataset
+    dados_gerais_df['pdb_code'] = dataset['pdb_code']
     dados_gerais_df["seed"] = num_seed
     dados_gerais_df["Treino_ou_teste"] = 0
     dados_gerais_df.loc[x_test.index,"Treino_ou_teste"] = 1 ## TREINO = 0, TESTE = 1
     dados_gerais_df["Ciclo"] = i
-    dados_gerais_df["dG_rosetta"] = y
+    dados_gerais_df["dG"] = y
 
     #drop non variable features
     var_thr = VarianceThreshold(threshold = 0)
@@ -89,10 +89,11 @@ def pre_process(data,i):
     dados_gerais_norm = scaler.transform(descr_data_)
     dados_gerais_norm = pd.DataFrame(dados_gerais_norm)
     
-    return x_train_norm,x_test_norm,y_train,y_test,erro_df,descr_data,dados_gerais_df,dados_gerais_norm,scaler,x_train_no_var_null,x_test_no_var_null
+    return x_train_norm,x_test_norm,y_train,y_test,erro_df,descr_data,dados_gerais_df,dados_gerais_norm,scaler,x_train_no_var_null,x_test_no_var_null,concol
 
-def num_k(data,percent=0.1):
-    '''Parâmetros:  
+def num_k(data,percent=0.3):
+
+    '''Parâmetros:
         data = dataset de treino
         percent = porcentagem maxima escolhida levando em conta o N amostral. (DEFAULT = 0.1)
         
@@ -101,7 +102,7 @@ def num_k(data,percent=0.1):
         
     data = pd.DataFrame(data)
     
-    if 0.1*len(data) < len(data.columns):
+    if percent*len(data) < len(data.columns):
                 
         numk = int(percent*len(data))
         #print(int(0.1*len(teste)))
@@ -119,13 +120,12 @@ def select_best_K_(ka,x_train_normalized,x_test_norm,y_train,dados_gerais_norm):
         x_test_norm = dataset de teste
         y_train = variável resposta de treino
         
-        Nessa função é selecionado as melhores k features. Essa seleção é geita utilizando informação mútua.
+        Nessa função é selecionado as melhores k features. Essa seleção é feita utilizando informação mútua.
     '''
     x_train_normalized= pd.DataFrame(x_train_normalized)
     x_test_norm= pd.DataFrame(x_test_norm)
     y_train = column_or_1d(y_train, warn=True)
 
-    
     melhores_k = SelectKBest(score_func=mutual_info_regression,k=ka).fit(x_train_normalized,y_train)
     ## seleciona k features
     cl = melhores_k.get_support(1)
@@ -139,10 +139,10 @@ def select_best_K_(ka,x_train_normalized,x_test_norm,y_train,dados_gerais_norm):
 
 ## MLR
 
-def lassocv_reg(x_train_normalized_newF, x_test_normalized_newF, y_train, y_test):
+def lassocv_reg(x_train_normalized_newF, x_test_normalized_newF, y_train, y_test,dados_pred_geral,cl,scaler,i,replica,descriptor):
     
-    folds = 5
-    repeats = 5
+    folds = 10
+    repeats = 10
     
     x_train_norm = pd.DataFrame(x_train_normalized_newF)
     x_test_norm = pd.DataFrame(x_test_normalized_newF)
@@ -150,8 +150,7 @@ def lassocv_reg(x_train_normalized_newF, x_test_normalized_newF, y_train, y_test
     y_test = column_or_1d(y_test, warn=True)
     
     rkf_grid = list(
-    RepeatedKFold(n_splits=folds, n_repeats=repeats, random_state=42).split(
-        x_train_normalized_newF, y_train))
+    RepeatedKFold(n_splits=folds, n_repeats=repeats, random_state=42).split(x_train_normalized_newF, y_train))
 
     ## criando o modelo
     lasso_cv = LassoCV(precompute="auto",
@@ -161,7 +160,7 @@ def lassocv_reg(x_train_normalized_newF, x_test_normalized_newF, y_train, y_test
     eps=1e-04,
     cv=rkf_grid,
     n_alphas=1000,
-    n_jobs=10)
+    n_jobs=-1)
     
     # Ajustando o modelo aos dados de treinamento
     lasso_cv.fit(x_train_norm, y_train)
@@ -175,43 +174,71 @@ def lassocv_reg(x_train_normalized_newF, x_test_normalized_newF, y_train, y_test
     # Avalie o desempenho do modelo (por exemplo, calculando o erro quadrático médio)
     mse = mean_squared_error(y_test, y_pred)
     
-    return mse, coefficients,best_alpha,y_pred,lasso_cv
+    # prediçao de dados gerados pelos ciclos dessa replica
+    pred_all = lasso_cv.predict(dados_pred_geral)
+    
+    logging.debug('Salvando arquivos em uma lista')
+    list_data_all = [x_train_normalized_newF,y_train, x_test_normalized_newF, y_test,scaler]
+    list_data_model = [best_alpha,mse,coefficients,lasso_cv,cl]
+    
+    logging.debug('Criando arquivos dos datasets')
+    # Criar um nome de arquivo único para cada ciclo
+    nome_arquivo = f'dados_gerados/dados_dataset_treino_teste_REG_ciclo_{i}_replica_{replica}.pkl'
+    
+    # Criar um nome de arquivo único para cada ciclo
+    with open(nome_arquivo, 'wb') as arquivo:
+        pickle.dump(list_data_all, arquivo)
+    
+    logging.debug('Criando arquivos de infos do modelo')
+    # Criar um nome de arquivo único para cada ciclo
+    nome_arquivo_1 = f'dados_gerados/dados_infos_modelo_REG_ciclo_{i}_replica_{replica}.pkl'
+    
+    # Criar um nome de arquivo único para cada ciclo
+    with open(nome_arquivo_1, 'wb') as arquivos:
+        pickle.dump(list_data_model, arquivos)
+    
+    return pred_all,mse
 
 ## RF
 
-def RF_model(x_train_normalized_newF,x_test_normalized_newF,y_train,y_test):
-    
+def RF_model(x_train_normalized_newF, y_train, x_test_normalized_newF, y_test, dados_pred_geral, i, replica, descriptor, scaler, cl):
 
-# Se y é uma matriz de coluna, você pode usar ravel() para transformá-la em uma matriz unidimensional
-
+     # Transformar dados em DataFrames (se necessário)
     x_train_norm = pd.DataFrame(x_train_normalized_newF)
     x_test_norm = pd.DataFrame(x_test_normalized_newF)
     
-    y_train = column_or_1d(y_train, warn=True)
-    y_test = column_or_1d(y_test, warn=True)
+    y_train = column_or_1d(y_train)
+    y_test = column_or_1d(y_test)
     
+     # Verifique por NaNs e Infinitos
+    if x_train_norm.isnull().sum().sum() > 0 or x_test_norm.isnull().sum().sum() > 0:
+        raise ValueError("Dados de treino ou teste contêm NaNs.")
+    if np.isinf(x_train_norm).sum().sum() > 0 or np.isinf(x_test_norm).sum().sum() > 0:
+        raise ValueError("Dados de treino ou teste contêm valores infinitos.")
+    
+#     # Definir o grid de parâmetros
     n_estimators = [10, 20, 50, 100, 500, 1000, 2000]
-    max_features = ['auto', 'sqrt']
-    max_depth = [int(x) for x in np.linspace(10, 110, num = 5)]
+    max_features = [None, 'sqrt']
+    max_depth = [int(x) for x in np.linspace(10, 110, num=5)]
     max_depth.append(None)
-    min_samples_split = [2, 5, 12,20]
+    min_samples_split = [2, 5, 12, 20]
     min_samples_leaf = [1, 2, 4, 8]
     bootstrap = [True, False]
 
-    ### Modelo Floresta Aleatoria
-    grid = {'n_estimators': n_estimators,
-            'max_features': max_features,
-            'max_depth': max_depth,
-            'min_samples_split': min_samples_split,
-            'min_samples_leaf': min_samples_leaf,
-            'bootstrap': bootstrap}
+    grid = {
+         'n_estimators': n_estimators,
+         'max_features': max_features,
+         'max_depth': max_depth,
+         'min_samples_split': min_samples_split,
+         'min_samples_leaf': min_samples_leaf,
+         'bootstrap': bootstrap
+     }
     
-    # Use the random grid to search for best hyperparameters
-    # First create the base model to tune
-    rf = RandomForestRegressor()
-    # Random search of parameters, using 3 fold cross validation,
-    # search across 100 different combinations, and use all available cores
-    rf_random = RandomizedSearchCV(estimator = rf, param_distributions = grid, n_iter = 1000, cv = 3, verbose=2, random_state=42, n_jobs = -1) # Fit the random search model
+    rf = RandomForestRegressor(random_state=42)
+    
+    rf_random = RandomizedSearchCV(estimator=rf, param_distributions=grid, 
+                                    n_iter=100, cv=3, verbose=2, 
+                                    random_state=42, n_jobs=-1)
     
     rf_random.fit(x_train_norm, y_train)
     
@@ -219,85 +246,88 @@ def RF_model(x_train_normalized_newF,x_test_normalized_newF,y_train,y_test):
     best_rf_model = rf_random.best_estimator_
     
     y_pred = best_rf_model.predict(x_test_norm)
-    rootMeanSqErr = np.sqrt(metrics.mean_squared_error(y_test, y_pred))
     
-    return best_params,best_rf_model,y_pred,rootMeanSqErr
-
-def modelo(dados_desc,i,replica,model):
-
-    x_train_norm,x_test_norm,y_train,y_test,erro_df,descr_data,dados_gerais_df,dados_gerais_norm,scaler,x_train_no_var_null,x_test_no_var_null = pre_process(dados_desc,i)
+     # Verifique se y_pred contém valores não finitos
+    if np.isnan(y_pred).sum() > 0:
+        raise ValueError("Previsão contém NaNs.")
     
-    ka = num_k(x_train_norm,0.1)
+    mse = np.sqrt(metrics.mean_squared_error(y_test, y_pred))
+    
+     # Predição dos dados gerados pelos ciclos dessa réplica
+    pred_all = best_rf_model.predict(dados_pred_geral)
+
+    list_data_all = [x_train_normalized_newF, y_train, x_test_normalized_newF, y_test, scaler]
+    list_data_model = [best_params, best_rf_model, mse, cl]
+    
+     # Salvar datasets e informações do modelo
+    nome_arquivo = f'dados_gerados/dados_dataset_treino_teste_RF_ciclo_{i}_replica_{replica}_{descriptor}.pkl'
+    with open(nome_arquivo, 'wb') as arquivo:
+        pickle.dump(list_data_all, arquivo)
+    
+     nome_arquivo_1 = f'dados_gerados/dados_infos_modelo_RF_ciclo_{i}_replica_{replica}_{descriptor}.pkl'
+    with open(nome_arquivo_1, 'wb') as arquivos:
+        pickle.dump(list_data_model, arquivos)
+    
+    return pred_all, mse,best_rf_model
+
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn import metrics
+import pickle
+
+def modelo(dados_desc,i,replica,model,descriptor,n_seq_test):
+
+    x_train_norm,x_test_norm,y_train,y_test,erro_df,descr_data,dados_gerais_df,dados_gerais_norm,scaler,x_train_no_var_null,x_test_no_var_null,concol = pre_process(dados_desc,i,n_seq_test)
+
+    ka = num_k(x_train_norm,0.3)
 
     x_train_normalized_newF,x_test_normalized_newF,cl,dados_pred_geral = select_best_K_(ka,x_train_norm,x_test_norm,y_train,dados_gerais_norm)
 
     if model == 'REG':
-        mse, coefficients,best_alpha,y_pred,lasso_cv = lassocv_reg(x_train_normalized_newF,x_test_normalized_newF, y_train, y_test)
         
-        # prediçao de dados gerados pelos ciclos dessa replica
-        pred_all = lasso_cv.predict(dados_pred_geral)
+        pred_all,mse = lassocv_reg(x_train_normalized_newF,x_test_normalized_newF,y_train,y_test,dados_pred_geral,cl,scaler,i,replica,descriptor)
         
-        logging.debug('Salvando arquivos em uma lista')
-        list_data_all = [x_train_normalized_newF,y_train, x_test_normalized_newF, y_test,scaler]
-        list_data_model = [best_alpha,mse,coefficients,lasso_cv,cl]
-        
-        logging.debug('Criando arquivos dos datasets')
-        # Criar um nome de arquivo único para cada ciclo
-        nome_arquivo = f'dados_gerados/dados_dataset_treino_teste_ciclo_REG_{i}_replica_{replica}.pkl'
-        
-        # Criar um nome de arquivo único para cada ciclo
-        with open(nome_arquivo, 'wb') as arquivo:
-            pickle.dump(list_data_all, arquivo)
-        
-        logging.debug('Criando arquivos de infos do modelo')
-        # Criar um nome de arquivo único para cada ciclo
-        nome_arquivo_1 = f'dados_gerados/dados_infos_modelo_ciclo_{i}_replica_{replica}_REG_.pkl'
-        
-        # Criar um nome de arquivo único para cada ciclo
-        with open(nome_arquivo_1, 'wb') as arquivos:
-            pickle.dump(list_data_model, arquivos)
-        
-    else:
-        best_params,best_rf_model,y_pred,mse = RF_model(x_train_normalized_newF,x_test_normalized_newF,y_train,y_test)
-        
-        # prediçao de dados gerados pelos ciclos dessa replica
-        pred_all = best_rf_model.predict(dados_pred_geral)
+        dados_pred_all = pd.DataFrame(pred_all)
 
-        list_data_all = [x_train_normalized_newF,y_train, x_test_normalized_newF, y_test,scaler]
-        list_data_model = [best_params,best_rf_model,mse,cl]
+        dados_gerais_df["dG_predito"] = dados_pred_all.iloc[:,0]
+        erro_modelo = dados_gerais_df.iloc[:,-2] - dados_gerais_df.iloc[:,-1]
+        dados_gerais_df["erro_modelo"] = erro_modelo
+
+        ## adicionando valores dos descritores:
+        dados_gerais_por_ciclo_df = pd.concat([dados_gerais_df,descr_data],axis=1)
+
+    if model == 'RF':
         
-        logging.debug('Criando arquivos dos datasets')
-        # Criar um nome de arquivo único para cada ciclo
-        nome_arquivo = f'dados_gerados/dados_dataset_treino_teste_ciclo_RF_{i}_replica_{replica}.pkl'
+        pred_all,mse,best_model = RF_model(x_train_normalized_newF, y_train, x_test_normalized_newF, y_test, dados_pred_geral, i, replica, descriptor, scaler, cl)
         
-        # Criar um nome de arquivo único para cada ciclo
-        with open(nome_arquivo, 'wb') as arquivo:
-            pickle.dump(list_data_all, arquivo)
+        dados_pred_all = pd.DataFrame(pred_all)
+
+        dados_gerais_df["dG_predito"] = dados_pred_all.iloc[:,0]
+        erro_modelo = dados_gerais_df.iloc[:,-2] - dados_gerais_df.iloc[:,-1]
+        dados_gerais_df["erro_modelo"] = erro_modelo
+
+        ## adicionando valores dos descritores:
+        dados_gerais_por_ciclo_df = pd.concat([dados_gerais_df,descr_data],axis=1)
+
+        dados_gerais_por_ciclo_df.to_csv('pos_modelo.csv')
+
+    return dados_gerais_por_ciclo_df,mse,best_model,concol,scaler,x_train_normalized_newF
+
+def preparando_dados_nova_predicao(data,colunas_to_drop,scaler,sele_features):
+    
+    ## removendo colunas com variancia 0
+
+    data.columns = data.columns.astype(str)
         
-        logging.debug('Criando arquivos de infos do modelo')
-        # Criar um nome de arquivo único para cada ciclo
-        nome_arquivo_1 = f'dados_gerados/dados_infos_modelo_ciclo_{i}_replica_{replica}_RF_.pkl'
-        
-        with open(nome_arquivo_1, 'wb') as arquivos:
-            pickle.dump(list_data_model, arquivos)
+    data_prediction = data.drop(colunas_to_drop,axis=1)
 
-    ## Dados gerais para predição
+    data_prediction_norm = scaler.transform(data_prediction)
+    data_prediction_norm = pd.DataFrame(data_prediction_norm)
+    columnsa = [col for col in data_prediction_norm.columns if col in sele_features.columns]
 
-    dados_pred_all = pd.DataFrame(pred_all)
+    data_prediction_norm_complete = data_prediction_norm[columnsa]
 
-    dados_gerais_df["dG_predito"] = dados_pred_all.iloc[:,0]
-    erro_modelo = dados_gerais_df.iloc[:,-2] - dados_gerais_df.iloc[:,-1]
-    dados_gerais_df["erro_modelo"] = erro_modelo
-
-    ## adicionando valores dos descritores:
-    dados_gerais_por_ciclo_df = pd.concat([dados_gerais_df,descr_data],axis=1)
-
-    y_Test_copia = y_test.copy()
-    y_Test_copia.reset_index(drop=True, inplace=True)
-    dados_erro = pd.DataFrame(y_pred)
-    dados_erro["test"] =  y_Test_copia
-    dados_erro["erro"] = dados_erro.iloc[:,0] - dados_erro.iloc[:,1]
-
-    return dados_gerais_por_ciclo_df,mse
-
- 
+    return data_prediction_norm_complete
+    
+    
