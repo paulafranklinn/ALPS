@@ -8,7 +8,7 @@ Welcome to the Active Learning for protein search (ALPS) project! This repositor
   - [Using .yml File](#using-yml-file)
   - [Installing Rosetta](#installing-rosetta)
   - [Installing PyRosetta](#installing-pyrosetta)
-  - [Pbee](#Pbee)
+  - [Evolutionary Scale Modeling (ESM)](#ESM)
 - [Running the Script](#running-the-script)
 - [Resources](#resources)
 
@@ -42,9 +42,9 @@ For instructions on how to install Rosetta, refer to this [YouTube video](https:
 
 Download and install PyRosetta from [this link](https://graylab.jhu.edu/download/PyRosetta4/archive/release/PyRosetta4.Release.python310.linux/).
 
-### Pbee
+### Evolutionary Scale Modeling (ESM)
 
-To measure the binding free energy, we use the Protein Binding Energy Estimator (Pbee). Therefore, it is necessary to add it to the same folder as this repository. It can be obtained from this [link](https://github.com/chavesejf/pbee).
+To mutate protein sequences, we use Evolutionary Scale Modeling (ESM). To ensure it works properly, you need to place it in the same folder as this repository. You can obtain ESM from this [link](https://github.com/facebookresearch/esm).
 
 ## Running the Script
 
